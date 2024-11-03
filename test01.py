@@ -18,9 +18,9 @@ def handle_client(client_socket):
 
 def start_server():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind(('0.0.0.0', 4444))  # 监听所有可用的网络接口，端口4444
+    server.bind(('0.0.0.0', 12818))  # 监听所有可用的网络接口，端口4444
     server.listen(5)
-    print("Server is listening on port 4444...")
+    print("Server is listening on port 12818...")
     
     while True:
         client, addr = server.accept()
