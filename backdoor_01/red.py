@@ -26,7 +26,7 @@ def handle_client(client_socket, base_dir):
                         if os.path.isdir(path):
                             current_dir = path
                         else:
-                            print("No such directory")
+                            print("没有相对应的文件捏~")
                         continue
                     elif command.lower().startswith('upload '):
                         # 处理上传命令
@@ -40,9 +40,9 @@ def handle_client(client_socket, base_dir):
                                     if not bytes_read:
                                         break
                                     client_socket.sendall(bytes_read)
-                            print(f"File {file_path} uploaded.")
+                            print(f"文件 {file_path} 已上传")
                         else:
-                            print("File not found.")
+                            print("没有相对应的文件捏~")
                         continue
                     elif command.lower() == 'exit':
                         client_socket.send(command.encode('utf-8'))
@@ -53,12 +53,12 @@ def handle_client(client_socket, base_dir):
                     if output:
                         print(output.decode('utf-8', errors='ignore'))
                     else:
-                        print("No output received")
+                        print("没有收到输出")
             else:
-                print("Invalid request")
+                print("无效的请求")
                 break
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"错误{e}")
             break
     client_socket.close()
 
@@ -70,11 +70,19 @@ def main():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((host, port))
     server.listen(5)
+    print("""
+欢迎使用脚本喵
+         .
+    ____/|
+    \ o.O|
+     |   |
+    =(_._)=
+""")
     print(f"[*] 监听到{host}:{port}")
 
     while True:
         client, address = server.accept()
-        print(f"[*] Accepted connection from {address[0]}:{address[1]}")
+        print(f"[*] {address[0]}:{address[1]}已连接")
         client_handler = threading.Thread(target=handle_client, args=(client, base_dir))
         client_handler.start()
 
