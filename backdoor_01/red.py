@@ -78,7 +78,7 @@ def main():
      |   |
     =(_._)=
 """)
-    print(f"[*] 监听到{host}:{port}")
+    print(f"[*] 正在监听{host}:{port}")
 
     while True:
         client, address = server.accept()
