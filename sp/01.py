@@ -28,7 +28,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         image_path = sys.argv[1]
     else:
-        image_path = 'tea.jpg'  # 默认图片路径
+        image_path = '01.png'  # 默认图片路径
     ex = FullScreenImage(image_path)
     ex.showFullScreen()
     sys.exit(app.exec_())
